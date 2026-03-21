@@ -1,0 +1,17 @@
+# Build artifacts
+build/
+bin/
+obj/
+
+# IDE / Tooling
+.cache/
+.clangd/
+.vscode/
+compile_commands.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+.clangd
+# Executables
+sudoku_solver
