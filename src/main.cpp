@@ -123,7 +123,7 @@ int main() {
       int val = ch - '0';
 
       if (!sudoku.isCellFixed(cy, cx)) {
-        sudoku.getPlayerBoard()[cy][cx] = val;
+        sudoku.placePlayerNumber(cy, cx, val);
         msg = "Number placed.";
       }
     }
