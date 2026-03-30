@@ -16,6 +16,7 @@ include_directories(include)
 set(SOURCES 
     src/main.cpp 
     src/SudokuBoard.cpp
+    src/Renderer.cpp
 )
 
 # 4. Create the executable

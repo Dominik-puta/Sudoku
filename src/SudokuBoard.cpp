@@ -1,6 +1,8 @@
 #include "SudokuBoard.h"
 #include <algorithm>
+#include <chrono>
 #include <random>
+#include <thread>
 #include <vector>
 
 SudokuBoard::SudokuBoard() {
@@ -69,7 +71,9 @@ void SudokuBoard::updateBitmasks(int row, int col, int num, bool add) {
   }
 }
 
-bool SudokuBoard::solveRecursive(int row, int col) {
+bool SudokuBoard::solveRecursive(int row, int col, bool visualize,
+                                 std::function<void()> onStep) {
+  nodeCount++;
   if (col == 9) {
     row++;
     col = 0;
@@ -79,44 +83,57 @@ bool SudokuBoard::solveRecursive(int row, int col) {
 
   // Skip cells that are already filled in the solution
   if (solutionBoard[row][col] != 0) {
-    return solveRecursive(row, col + 1);
+    return solveRecursive(row, col + 1, visualize, onStep);
   }
 
   for (int num = 1; num <= 9; ++num) {
     if (isSafe(row, col, num)) {
       solutionBoard[row][col] = num;
       updateBitmasks(row, col, num, true);
-
-      if (solveRecursive(row, col + 1)) {
+      if (visualize && onStep) {
+        // Sleep for a short duration to visualize the solving process
+        playerBoard = solutionBoard;
+        onStep();
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
+      if (solveRecursive(row, col + 1, visualize, onStep)) {
         return true;
       }
 
       // Backtrack
       solutionBoard[row][col] = 0;
       updateBitmasks(row, col, num, false);
+
+      if (visualize && onStep) {
+        playerBoard = solutionBoard;
+        onStep(); // Show the backtrack (erasing the number)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+      }
     }
   }
   return false;
 }
 
-bool SudokuBoard::solve() {
-  // Reset bitmasks
+bool SudokuBoard::solve(bool visualize, std::function<void()> onStep) {
+  nodeCount = 0;
   rowUsed.fill(0);
   colUsed.fill(0);
   boxUsed.fill(0);
 
-  // Initialize bitmasks from current board
-  for (int i = 0; i < 9; ++i) {
-    for (int j = 0; j < 9; ++j) {
+  // Sync the "Work Area" (solutionBoard) with what the player sees
+  for (int i = 0; i < 9; i++) {
+    for (int j = 0; j < 9; j++) {
+      solutionBoard[i][j] = playerBoard[i][j];
       if (solutionBoard[i][j] != 0) {
         updateBitmasks(i, j, solutionBoard[i][j], true);
       }
     }
   }
-  return solveRecursive(0, 0);
+  return solveRecursive(0, 0, visualize, onStep);
 }
 
 void SudokuBoard::generate(int difficulty) {
+
   // 1. Reset everything
   rowUsed.fill(0);
   colUsed.fill(0);
@@ -147,7 +164,7 @@ void SudokuBoard::generate(int difficulty) {
   }
 
   // 3. Solve the rest (this will now be near-instant and 100% successful)
-  solveRecursive(0, 0);
+  solveRecursive(0, 0, visualize, nullptr);
 
   // 4. Scramble the digits (The relabeling trick)
   std::vector<int> map_vec = {1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -176,6 +193,7 @@ void SudokuBoard::generate(int difficulty) {
     }
   }
 
+  nodeCount = 0;
   // 6. Final Sync
   rowUsed.fill(0);
   colUsed.fill(0);
